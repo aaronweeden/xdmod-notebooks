@@ -3,7 +3,7 @@ title: "XDMoD Data Analytics Framework — First Example with R and Reticulate"
 output:
   html_document:
     toc: true
-    toc_depth: '4'
+    toc_depth: 4
     df_print: paged
   pdf_document:
     df_print: kable
@@ -37,7 +37,7 @@ FutureWarning: Index.format is deprecated and will be removed in a future versio
 
 ## Load the required R libraries
 
-```{r setup, results='hide',message=FALSE,warning=FALSE}
+```{r, results = 'hide', message = FALSE, warning = FALSE}
 library(dotenv)
 library(knitr)
 library(plotly)
@@ -50,6 +50,86 @@ library(tidyverse)
 
 ```{r}
 use_condaenv("xdmod-notebooks")
+```
+
+## Install/upgrade the `xdmod-data` package
+
+```{r}
+py_install("xdmod-data>=1.0.0,<2.0.0", pip = TRUE)
+```
+
+## Define the XDMoD colors and Plotly layout
+
+```{r}
+xdmod_colors <- c(
+  "#1199FF", "#DB4230", "#4E665D", "#F4A221", "#66FF00",
+  "#33ABAB", "#A88D95", "#789ABC", "#FF99CC", "#00CCFF",
+  "#FFBC71", "#A57E81", "#8D4DFF", "#FF6666", "#CC99FF",
+  "#2F7ED8", "#0D233A", "#8BBC21", "#910000", "#1AADCE",
+  "#492970", "#F28F43", "#77A1E5", "#3366FF", "#FF6600",
+  "#808000", "#CC99FF", "#008080", "#CC6600", "#9999FF",
+  "#99FF99", "#969696", "#FF00FF", "#FFCC00", "#666699",
+  "#00FFFF", "#00CCFF", "#993366", "#3AAAAA", "#C0C0C0",
+  "#FF99CC", "#FFCC99", "#CCFFCC", "#CCFFFF", "#99CCFF",
+  "#339966", "#FF9966", "#69BBED", "#33FF33", "#6666FF",
+  "#FF66FF", "#99ABAB", "#AB8722", "#AB6565", "#990099",
+  "#999900", "#CC3300", "#669999", "#993333", "#339966",
+  "#C42525", "#A6C96A", "#111111"
+)
+xdmod_plotly_layout = function (p, title) {
+  layout(
+    p,
+    hoverlabel = list(bgcolor = "white"),
+    plot_bgcolor = "white",
+    xaxis = list(
+      titlefont = list(
+        family = "Arial, sans-serif",
+        size = 12,
+        color = "#5078a0"
+      ),
+      color = "#606060",
+      ticks = "outside",
+      ticklen = 10,
+      tickcolor = "#c0cfe0",
+      gridcolor = "#bfc0c0",
+      linecolor = "#c0cfe0",
+      showgrid = FALSE,
+      zerolinecolor = "#c0cfe1",
+      showline = TRUE,
+      zerolinewidth = 4,
+      tickformat = "%Y-%m-%d"
+    ),
+    yaxis = list(
+      titlefont = list(
+        family = "Arial, sans-serif",
+        size = 12,
+        color = "#1199FF"
+      ),
+      color = "#606060",
+      gridcolor = "#bfc0c0",
+      linecolor = "#c0cfe0",
+      zerolinecolor = "#c0cfe1",
+      showline = TRUE,
+      rangemode = "tozero",
+      zerolinewidth = 4
+    ),
+    title = list(
+      font = list(
+        color = "#444b6e",
+        size = 16
+      )
+    ),
+    hovermode = "closest",
+    showlegend = TRUE,
+    legend = list(
+      orientation = "h",
+      y = -0.2
+    ),
+    margin = list(
+        t = 50
+    )
+  )
+}
 ```
 
 ## Load the API token {#load-the-api-token}
@@ -87,15 +167,24 @@ with(dw, {
 })
 ```
 
+## Show tabular data
+
+```{r}
+data
+```
+
 # Process and plot the data
 
 ## Convert to Tidyverse data frame
 
 ```{r}
 df <- data %>%
-  rownames_to_column(var="Time") %>% # Move row names to column
-  tibble() %>% # User newer data.frame
-  mutate(Time=ymd(Time)) # Convert character to date
+  # Move row names to column
+  rownames_to_column(var = "Time") %>%
+  # Use newer data.frame
+  tibble() %>%
+  # Convert character to date
+  mutate(Time = ymd(Time))
 ```
 
 ## Show tabular data
@@ -107,8 +196,18 @@ df
 ## Plot the data
 
 ```{r}
-ggplot(df, aes(x=Time,y=`Number of Users: Active`)) +
-    geom_line() + geom_point()
+plot <- ggplot(
+  df,
+  aes(
+    x = `Time`,
+    y = `Number of Users: Active`
+  )
+) +
+  geom_line(color = xdmod_colors[1]) +
+  geom_point(color = xdmod_colors[1])
+
+ggplotly(plot) %>%
+  xdmod_plotly_layout
 ```
 
 ## Do further data processing
@@ -119,16 +218,29 @@ Run the code below to add a column for the day of the week:
 
 ```{r}
 df$`Day Name` <- factor(
-    weekdays(df$Time), 
-    levels=c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
-             "Saturday", "Sunday"))
+  weekdays(df$Time),
+  levels = c(
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+    "Saturday", "Sunday"
+  )
+)
 df
 ```
 
 Run the code below to show a box plot of the data grouped by day of the week:
 
 ```{r}
-ggplot(df, aes(x=`Day Name`,y=`Number of Users: Active`)) + geom_boxplot()
+plot <- ggplot(
+  df,
+  aes(
+    x=`Day Name`,
+    y=`Number of Users: Active`
+  )
+) +
+  geom_boxplot(color = xdmod_colors[1])
+
+ggplotly(plot) %>%
+  xdmod_plotly_layout
 ```
 
 # Details of the `get_data()` method
@@ -137,7 +249,7 @@ Now that you have seen a basic example of using the `get_data()` method, read be
 
 ## Wrap data warehouse calls in a runtime context
 
-XDMoD data is accessed over a network connection, which involves establishing connections and creating temporary resources. To ensure these connections and resources are cleaned up properly in spite of any runtime errors, you should call data warehouse methods within a **runtime context** by using the `with` statement in `Python` to wrap the execution of XDMoD queries, store the result, and execute any long running calculations outside of the runtime context, as in the template below. `Reticulate` in R tries to mimic such behaiviour with R `with` function. 
+XDMoD data is accessed over a network connection, which involves establishing connections and creating temporary resources. To ensure these connections and resources are cleaned up properly in spite of any runtime errors, you should call data warehouse methods within a **runtime context** by using the `with` statement to wrap the execution of XDMoD queries, store the result, and execute any long running calculations outside of the runtime context, as in the template below.
 
 ```{r}
 with(dw, {
@@ -180,7 +292,7 @@ You can instead specify the duration using a special string value; a list of the
 
 ```{r}
 with(dw, {
-  durations = dw$get_durations()
+  durations <- dw$get_durations()
 })
 unlist(durations)
 ```
@@ -191,7 +303,7 @@ A **realm** is a category of data in the XDMoD data warehouse. You can use the `
 
 ```{r}
 with(dw, {
-  realms = dw$describe_realms()
+  realms <- dw$describe_realms()
 })
 realms
 ```
@@ -202,18 +314,65 @@ A **metric** is a statistic for which data exists in a given realm. You can use 
 
 ```{r}
 with(dw, {
-  metrics = dw$describe_metrics("Jobs")
+  metrics <- dw$describe_metrics("Jobs")
 })
 metrics %>% knitr::kable(format="html")
 ```
 
 ## Dimension
+
 A **dimension** is a grouping of data. You can use the `describe_dimensions(realm)` method to get a data frame containing the list of valid dimensions in the given realm. The realm must be passed in as a string.
 
 ```{r}
-with(dw,{
-    dimensions <- dw$describe_dimensions("Jobs") })
-dimensions %>% knitr::kable(format="html")
+with(dw, {
+  dimensions <- dw$describe_dimensions("Jobs")
+})
+dimensions %>% knitr::kable(format = "html")
+```
+
+The code below shows how to get data grouped by the `Resource` dimension and plot them.
+
+```{r}
+metric_label <- "Number of Users: Active"
+dimension_label <- "Resource"
+
+with(dw, {
+  data <- dw$get_data(
+    duration = c("2023-01-01", "2023-04-30"),
+    realm = "Jobs",
+    metric = metric_label,
+    dimension = dimension_label
+  )
+})
+
+df <- data %>%
+  # Move row names to column
+  rownames_to_column(var = "Time") %>%
+  # Use newer data.frame
+  tibble() %>%
+  # Convert character to date
+  mutate(Time = ymd(Time)) %>%
+  # Reshape data frame for plotting
+  pivot_longer(
+    -Time,
+    names_to = dimension_label,
+    values_to = metric_label
+  )
+
+plot <- ggplot(
+  df,
+  aes(
+    x = `Time`,
+    y = .data[[metric_label]],
+    color = .data[[dimension_label]]
+  )
+) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = xdmod_colors)
+
+ggplotly(plot) %>%
+  xdmod_plotly_layout
 ```
 
 ## Pass in realms, metrics, and dimensions using labels or IDs
@@ -260,12 +419,37 @@ with(dw,{
 
 ## Dataset Type
 
-The **dataset type** can either be 'timeseries' (the default), in which data is grouped by a time [aggregation unit](#Aggregation-unit), or 'aggregate', in which the data is aggregated across the entire. For 'aggregate', the results are returned as a Pandas Series rather than a data frame.
+The **dataset type** can either be 'timeseries' (the default), in which data is grouped by a time [aggregation unit](#Aggregation-unit), or 'aggregate', in which the data is aggregated across the entire. For 'aggregate', the results are returned as a Pandas Series rather than a DataFrame.
+
+The code chunks below show how to create a bar plot of data aggregated over four months, grouped by resource. Note that using Python to convert the Series to a DataFrame is a workaround for an error in Reticulate.
+
+```{python}
+from xdmod_data.warehouse import DataWarehouse
+dw = DataWarehouse('https://xdmod.access-ci.org')
+with dw:
+  data = dw.get_data(
+      duration=('2023-01-01', '2023-04-30'),
+      realm='Jobs',
+      metric='Number of Users: Active',
+      dimension='Resource',
+      dataset_type='aggregate',
+  )
+data = data.to_frame()
+data = data.reset_index()
+```
 
 ```{r}
-with(dw, {
-  data <- dw$get_data(dataset_type = "timeseries")
-})
+
+plot <- ggplot(
+  py$data,
+  aes(
+    x = "Resource"
+  )
+) +
+  geom_bar(color = xdmod_colors[1])
+
+ggplotly(plot) %>%
+  xdmod_plotly_layout
 ```
 
 ## Aggregation unit {#Aggregation-unit}

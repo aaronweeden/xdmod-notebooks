@@ -19,14 +19,20 @@ Install the following R libraries in RStudio Desktop (`Tools` > `Install Package
 
 Install Anaconda following [these instructions](https://docs.anaconda.com/free/anaconda/install/index.html).
 
-Next an Anaconda environment for `xdmod-notebooks` should be created and the `xdmod-data` package should be installed. Command line instructions for doing so are below.
+Next an Anaconda environment for `xdmod-notebooks` should be created either through the command line or the Anaconda Navigator GUI as instructed below.
 
-```
-conda activate
-conda create -y -n xdmod-notebooks python
-conda activate xdmod-notebooks
-python3 -m pip install 'xdmod-data>=1.0.0,<2.0.0'
-```
+* Command line
+    ```
+    conda activate
+    conda create -y -n xdmod-notebooks python
+    ```
+* Anaconda Navigator
+    1. Open Anaconda Navigator following [these instructions](https://docs.anaconda.com/free/anaconda/install/verify-install/).
+    1. Click the `Environments` tab.
+    1. Click `Create`.
+        1. For the name, type `xdmod-notebooks`.
+        1. Make sure only the box for Python is checked.
+        1. Click `Create`.
 
 ### Obtain and store an API token
 Follow [these instructions](https://github.com/ubccr/xdmod-data#api-token-access) to obtain an API token.
